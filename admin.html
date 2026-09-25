@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; frame-src https://www.youtube-nocookie.com; connect-src 'self' https://kbvvxcsmpqcddwlmgdnl.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex, nofollow">
+<title>Horn Afriik Admin</title>
+<meta name="theme-color" content="#0284C7">
+<link rel="icon" href="icons/favicon-48.png" type="image/png" sizes="48x48">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="assets/css/admin.css?v=1.3.0">
+</head>
+<body>
+<noscript><p style="padding:24px">The admin dashboard needs JavaScript.</p></noscript>
+
+<!-- Sign in -->
+<section class="login" id="login" hidden>
+  <form class="card" id="login-form" novalidate>
+    <div class="brand">
+      <img class="mark-img" src="icons/emblem.png" width="40" height="40" alt="">
+      <div class="wordmark">Horn Afriik<small>Admin dashboard</small></div>
+    </div>
+    <div>
+      <h1 class="h-display" style="font-size:26px">Admin sign in</h1>
+      <p class="muted" style="margin:4px 0 0">Use the same email and password as in the app.</p>
+    </div>
+    <div class="field"><label for="l-email">Email</label><input class="input" id="l-email" type="email" autocomplete="email" required></div>
+    <div class="field"><label for="l-pass">Password</label><input class="input" id="l-pass" type="password" autocomplete="current-password" required></div>
+    <p class="err" id="l-err" hidden></p>
+    <button class="btn primary block" type="submit" id="l-btn">Sign in</button>
+    <a href="./" class="small" style="text-align:center">Back to the app</a>
+  </form>
+</section>
+
+<!-- Dashboard -->
+<div class="shell" id="shell" hidden>
+  <aside class="side">
+    <div class="brand">
+      <img class="mark-img" src="icons/emblem.png" width="40" height="40" alt="">
+      <div class="wordmark">Horn Afriik<small>Admin</small></div>
+    </div>
+    <nav id="nav-side"></nav>
+    <div class="foot">
+      <div class="me"><div class="avatar" id="me-av">A</div><div style="min-width:0"><b id="me-name">Admin</b><span id="me-email"></span></div></div>
+      <a href="./"><svg class="ic" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>Open the app</a>
+      <button data-act="theme"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>Dark / light</button>
+      <button data-act="signout"><svg class="ic" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Sign out</button>
+    </div>
+  </aside>
+  <header class="topbar">
+    <div class="row1">
+      <img class="mark-img sm" src="icons/emblem.png" width="40" height="40" alt="">
+      <b style="flex:1">Horn Afriik Admin</b>
+      <a class="btn sm" href="./">App</a>
+      <button class="btn sm icon" data-act="theme" aria-label="Dark or light theme"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg></button>
+      <button class="btn sm icon" data-act="signout" aria-label="Sign out"><svg class="ic" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></button>
+    </div>
+    <nav id="nav-top"></nav>
+  </header>
+  <main class="main" id="main"><div class="loading"><span class="spin"></span></div></main>
+</div>
+
+<div id="drawer-root"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="file-pick" hidden>
+
+<script src="assets/js/sb.js?v=1.3.0" defer></script>
+<script src="assets/js/admin.js?v=1.3.0" defer></script>
+</body>
+</html>

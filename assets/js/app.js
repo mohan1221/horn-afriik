@@ -6,7 +6,7 @@ const CATS = [
   {id:'arts', name:'Arts'},
   {id:'islamic', name:'Islamic'}
 ];
-const S = {
+let S = {
 physics:{name:'Physics', so:'Fiisigis', sym:'Ph', cat:'science', units:['Motion & Forces','Work & Energy','Electricity','Light & Waves'], q:[
  ['What is the SI unit of force?',['Newton','Joule','Watt','Pascal'],0,'Force is measured in newtons (N). 1 N = 1 kg·m/s².'],
  ['Near Earth\'s surface, acceleration due to gravity is about…',['9.8 m/s²','3.0 m/s²','98 m/s²','1.6 m/s²'],0,'g ≈ 9.8 m/s². The Moon\'s value is about 1.6 m/s².'],
@@ -92,11 +92,11 @@ islamic:{name:'Islamic Studies', so:'Tarbiyada Islaamka', sym:'إ', cat:'islamic
  ['In which month is fasting obligatory?',['Ramadan','Shawwal','Muharram','Rajab'],0,'Ramadan is the ninth month of the Hijri calendar.'],
  ['The minimum amount of wealth on which Zakah is due is called…',['Nisab','Hawl','Sadaqah','Fitrah'],0,'Hawl is the full lunar year the wealth must be held.']]}
 };
-const ORDER = Object.keys(S);
+let ORDER = Object.keys(S);
 
 /* ---------- course notes (one lesson per unit) ---------- */
 const ar = t => `<span lang="ar">${t}</span>`;
-const L = {
+let L = {
 physics:{
  'Motion & Forces':[['Speed and velocity','Speed = distance ÷ time. Velocity is speed in a stated direction, so it is a vector quantity.'],['Newton\'s second law','F = m × a. A force in newtons (N) accelerates a mass in kilograms. Weight is W = m × g, with g ≈ 9.8 m/s².'],['Balanced forces','When forces balance, an object stays still or keeps moving at a steady speed.']],
  'Work & Energy':[['Work','Work = force × distance moved in the direction of the force. It is measured in joules (J).'],['Kinetic and potential energy','Kinetic energy = ½mv². Gravitational potential energy = mgh.'],['Conservation','Energy is never created or destroyed. It only changes from one form to another.']],
@@ -249,9 +249,66 @@ const state = {
   filter: 'all',
   rating: 4
 };
-const save = () => { store.set('attempts', state.attempts); store.set('settings', state.settings); store.set('user', state.user); store.set('done', [...state.done]); };
+const save = () => { store.set('attempts', state.attempts); store.set('settings', state.settings); store.set('user', state.user); store.set('done', [...state.done]); store.set('doneq', state.doneq); };
+state.doneq = store.get('doneq', []);   // lesson ticks waiting to be sent to the server
+function setDone(sid, unit, on){
+  const k = sid+'|'+unit;
+  on ? state.done.add(k) : state.done.delete(k);
+  state.doneq = state.doneq.filter(x => x.k !== k).concat({k, sid, unit, on});
+  save(); syncAll();
+}
 const isDone = (sid, u) => state.done.has(sid+'|'+u);
-const TOTAL_LESSONS = Object.values(S).reduce((n,s)=>n+s.units.length,0);
+let TOTAL_LESSONS = Object.values(S).reduce((n,s)=>n+s.units.length,0);
+const firstSid = () => S.chemistry ? 'chemistry' : ORDER[0];
+
+/* ================= LIVE CONTENT (courses edited in the admin dashboard) ================= */
+let LMETA = {};   // lesson image + video, by subject and lesson title
+function applyContent(c){
+  if (!c || !Array.isArray(c.subjects) || !c.subjects.length) return false;
+  const S2 = {}, L2 = {}, M2 = {};
+  c.subjects.forEach(x => {
+    S2[x.id] = {name:x.name, so:x.so||'', sym:x.sym || x.name.slice(0,2), cat: CATS.some(k=>k.id===x.cat) ? x.cat : 'science', desc:x.description||'', units:[], q:[]};
+    L2[x.id] = {}; M2[x.id] = {};
+  });
+  (c.lessons||[]).forEach(l => {
+    const sub = S2[l.subject_id]; if (!sub || sub.units.includes(l.title)) return;
+    sub.units.push(l.title);
+    L2[l.subject_id][l.title] = (Array.isArray(l.sections) ? l.sections : []).map(x => [x.h||'', x.p||'']);
+    M2[l.subject_id][l.title] = {img: l.image_url || null, video: l.video_url || null};
+  });
+  (c.questions||[]).forEach(q => {
+    const sub = S2[q.subject_id]; if (!sub || !Array.isArray(q.options) || q.options.length < 2) return;
+    sub.q.push([q.question, q.options, Math.min(Math.max(q.correct|0,0), q.options.length-1), q.explanation||'', q.lesson_title||null, q.image_url||null]);
+  });
+  S = S2; L = L2; LMETA = M2; ORDER = Object.keys(S2);
+  TOTAL_LESSONS = Object.values(S).reduce((n,x)=>n+x.units.length,0);
+  if (!S[state.sid]) state.sid = ORDER[0];
+  if (!S[state.exam.sid]) state.exam.sid = ORDER[0];
+  if (!CATS.some(k => k.id === state.cat && ORDER.some(o => S[o].cat === k.id))) state.cat = (S[ORDER[0]]||{}).cat || 'science';
+  return true;
+}
+function refreshScreen(){
+  const R = {home:renderHome, subject:renderSubject, lesson:renderLesson, explore:renderExplore, history:renderHistory};
+  if (!R[current]) return;
+  if ((current === 'subject' || current === 'lesson') && !S[state.sid]) return go('home');
+  if (current === 'lesson' && !S[state.sid].units.includes(state.unit)) return go('subject');
+  const el = $('#s-'+current), y = el.scrollTop;
+  R[current](); el.scrollTop = y;
+}
+let contentSig = store.get('content_sig', '');
+async function loadContent(){
+  if (!window.SB) return;
+  try {
+    const [subjects, lessons, questions] = await Promise.all([
+      SB.selectAll('subjects', {published:'eq.true', order:'sort.asc,name.asc', select:'id,name,so,sym,cat,description,sort'}),
+      SB.selectAll('lessons', {published:'eq.true', order:'sort.asc,title.asc', select:'subject_id,title,sort,sections,image_url,video_url'}),
+      SB.selectAll('questions', {order:'sort.asc,id.asc', select:'subject_id,lesson_title,question,options,correct,explanation,image_url'})
+    ]);
+    const c = {subjects, lessons, questions}, sig = String(hash(JSON.stringify(c)));
+    if (sig === contentSig) return;
+    if (applyContent(c)){ contentSig = sig; store.set('content', c); store.set('content_sig', sig); refreshScreen(); }
+  } catch(e){ /* offline: keep the saved copy */ }
+}
 
 /* ================= HELPERS ================= */
 const $ = s => document.querySelector(s);
@@ -285,7 +342,7 @@ function unitBest(sid, unit){
   return best.length ? Math.max(...best) : null;
 }
 function lessonsDone(sid){ return S[sid].units.filter(u=>isDone(sid,u)).length; }
-function subjProgress(sid){ return Math.round(lessonsDone(sid)/S[sid].units.length*100); }
+function subjProgress(sid){ return S[sid].units.length ? Math.round(lessonsDone(sid)/S[sid].units.length*100) : 0; }
 function mastery(sid){ const a = state.attempts.filter(x=>x.sid===sid); if (!a.length) return null;
   return Math.round(a.reduce((s,x)=>s+x.correct,0)/a.reduce((s,x)=>s+x.total,0)*100); }
 function shuffle(a){ a = a.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
@@ -330,7 +387,7 @@ function renderHome(){
   const st = stats(), u = state.user, first = u.name.split(' ')[0];
   const sorted = state.attempts.slice().sort((a,b)=>b.t-a.t);
   const recent = sorted.slice(0,3);
-  const lastSid = (sorted.find(a=>a.sid!=='mock') || {sid:'chemistry'}).sid;
+  const lastSid = (sorted.find(a=>a.sid!=='mock' && S[a.sid] && S[a.sid].units.length) || {sid: ORDER.find(k=>S[k].units.length) || ORDER[0]}).sid;
   const nextUnit = S[lastSid].units.find(u=>!isDone(lastSid,u)) || S[lastSid].units[0];
   const doneAll = state.done.size;
   const subjects = ORDER.filter(k => S[k].cat === state.cat);
@@ -368,7 +425,7 @@ function renderHome(){
       <span class="go">${ic('zap')}</span>
     </button>
 
-    <div class="sec-title"><h3>Subjects</h3><button class="link" data-tab="explore">See all 12</button></div>
+    <div class="sec-title"><h3>Subjects</h3><button class="link" data-tab="explore">See all ${ORDER.length}</button></div>
     <div class="seg glass" role="tablist">
       ${CATS.map(c=>`<button class="${c.id===state.cat?'on':''}" data-cat="${c.id}" role="tab" aria-selected="${c.id===state.cat}">${c.name}</button>`).join('')}
     </div>
@@ -394,9 +451,9 @@ function renderHome(){
 }
 function actRow(a){
   const p = pct(a), pass = p >= 50;
-  const name = a.sid === 'mock' ? 'Mock exam' : S[a.sid].name;
+  const name = a.sid === 'mock' ? 'Mock exam' : S[a.sid] ? S[a.sid].name : 'Old subject';
   return `<div class="act">
-    ${a.sid === 'mock' ? '<span class="sym" style="width:38px;height:38px;border-radius:12px;font-size:14px">Mx</span>' : symTile(a.sid)}
+    ${a.sid === 'mock' || !S[a.sid] ? '<span class="sym" style="width:38px;height:38px;border-radius:12px;font-size:14px">'+(a.sid==='mock'?'Mx':'–')+'</span>' : symTile(a.sid)}
     <div class="meta"><b>${name} · ${esc(a.unit)}</b><span>${ago(a.t)} · ${a.correct}/${a.total} correct${a.sample?' · sample':''}</span></div>
     <span class="chip ${pass?'ok':'bad'} num">${p}%</span>
   </div>`;
@@ -430,7 +487,7 @@ function renderSubject(){
         <div class="glass unit">
           <button class="unit-main" data-act="lesson" data-unit="${esc(u)}">
             <span class="n num ${d?'done':''}">${d ? ic('check') : i+1}</span>
-            <span class="meta"><b>${esc(u)}</b><span class="muted small">${d?'Lesson complete':'Lesson · '+L[sid][u].length+' key ideas'}${b!==null?' · best '+b+'%':''}</span></span>
+            <span class="meta"><b>${esc(u)}</b><span class="muted small">${d?'Lesson complete':'Lesson · '+(L[sid][u]||[]).length+' key ideas'}${b!==null?' · best '+b+'%':''}</span></span>
           </button>
           <button class="play" data-act="start" data-unit="${esc(u)}" aria-label="Test ${esc(u)}">${ic('play')}</button>
         </div>`; }).join('')}
@@ -441,21 +498,23 @@ function renderSubject(){
 /* ================= LESSON ================= */
 function renderLesson(){
   const sid = state.sid, s = S[sid], u = state.unit, ui = s.units.indexOf(u);
-  const notes = L[sid][u], d = isDone(sid,u), next = s.units[ui+1];
+  const notes = L[sid][u] || [], d = isDone(sid,u), next = s.units[ui+1];
+  const meta = (LMETA[sid] && LMETA[sid][u]) || {}, qn = unitPool(sid,u).length;
   const b = unitBest(sid,u);
   $('#s-lesson').innerHTML = `
     <div class="back-row"><button class="icon-btn glass" data-act="subject" data-sid="${sid}" aria-label="Back to ${s.name}">${ic('back')}</button><span class="t">${s.name} · Unit ${ui+1} of ${s.units.length}</span></div>
     <div class="lesson-head">
-      <div class="row" style="gap:8px;flex-wrap:wrap"><span class="chip ice">${ic('book')}Lesson</span><span class="chip ice">${notes.length+1} min read</span>${d?`<span class="chip ok">${ic('check')}Completed</span>`:''}</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap"><span class="chip ice">${ic('book')}Lesson</span><span class="chip ice">${notes.length+1} min read</span>${meta.video?`<span class="chip ice">${ic('play')}Video</span>`:''}${d?`<span class="chip ok">${ic('check')}Completed</span>`:''}</div>
       <h2 class="h-display">${esc(u)}</h2>
     </div>
-    ${FIG[sid]()}
+    ${meta.video ? videoEmbed(meta.video) : ''}
+    ${meta.img ? `<figure class="glass figure"><img class="lesson-img" src="${esc(meta.img)}" alt="${esc(u)}" loading="lazy"></figure>` : FIG[sid] ? FIG[sid]() : ''}
     <div class="notes">
       ${notes.map(([h,p],i)=>`<div class="glass note"><span class="n num">${i+1}</span><div><b>${h}</b><p>${p}</p></div></div>`).join('')}
     </div>
     <div class="glass lesson-cta">
       <b style="font-size:17px">Test your knowledge</b>
-      <p>${s.q.length} questions · ${state.settings.timer?'30 s each':'untimed'} · ${state.settings.instant?'instant feedback':'answers at the end'}${b!==null?' · your best: '+b+'%':''}</p>
+      <p>${qn ? qn+' questions' : 'No questions yet'} · ${state.settings.timer?'30 s each':'untimed'} · ${state.settings.instant?'instant feedback':'answers at the end'}${b!==null?' · your best: '+b+'%':''}</p>
       <button class="btn primary block" data-act="start" data-unit="${esc(u)}">${ic('play')}Start the test</button>
       <button class="btn ghost block" data-act="toggle-done">${d ? ic('check')+'Lesson completed' : 'Mark lesson as complete'}</button>
     </div>
@@ -466,15 +525,25 @@ function renderLesson(){
 let quiz = null, timerId = null;
 const QTIME = 30;
 function buildQuestions(pool){
-  return pool.map(([q,o,a,e]) => {
+  return pool.map(([q,o,a,e,,img]) => {
     const idx = shuffle(o.map((_,i)=>i));
-    return {q, o: idx.map(i=>o[i]), a: idx.indexOf(a), e};
+    return {q, o: idx.map(i=>o[i]), a: idx.indexOf(a), e, img};
   });
 }
+function unitPool(sid, unit){
+  const all = (S[sid] && S[sid].q) || [], own = all.filter(q => q[4] === unit);
+  return own.length >= 3 ? own : all;
+}
+function videoEmbed(url){
+  const y = String(url).match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/);
+  if (y) return `<div class="glass video"><iframe src="https://www.youtube-nocookie.com/embed/${y[1]}" title="Lesson video" allow="accelerometer; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe></div>`;
+  return `<div class="glass video"><video controls preload="metadata" playsinline src="${esc(url)}"></video></div>`;
+}
 function startQuiz(sid, unit, opts = {}){
-  const pool = shuffle(opts.pool || S[sid].q);
+  const pool = shuffle(opts.pool || unitPool(sid, unit));
+  if (!pool.length){ toast('No questions for this lesson yet'); return; }
   const qtime = opts.qtime || QTIME;
-  if (L[sid] && L[sid][unit] && !isDone(sid, unit)){ state.done.add(sid+'|'+unit); save(); }
+  if (L[sid] && L[sid][unit] && !isDone(sid, unit)) setDone(sid, unit, true);
   quiz = {sid, unit, opts, qs: buildQuestions(pool), i:0, answers:[], sel:null, locked:false, qtime, left:qtime, started:Date.now(),
     exam: !!opts.exam, instant: opts.exam ? false : state.settings.instant, timed: opts.exam ? true : state.settings.timer};
   go('quiz');
@@ -482,7 +551,7 @@ function startQuiz(sid, unit, opts = {}){
 function renderQuiz(){
   if (!quiz) startQuizSilently();
   const Q = quiz.qs[quiz.i], n = quiz.qs.length;
-  const title = (quiz.exam ? 'Exam · ' : '') + (quiz.sid === 'mock' ? 'Mixed subjects' : S[quiz.sid].name);
+  const title = (quiz.exam ? 'Exam · ' : '') + (quiz.sid === 'mock' ? 'Mixed subjects' : (S[quiz.sid]||{name:''}).name);
   const segs = quiz.qs.map((_,i) => {
     const a = quiz.answers[i];
     let c = '';
@@ -499,8 +568,9 @@ function renderQuiz(){
     <div class="segs">${segs}</div>
     <p class="qcount num">Question ${quiz.i+1} of ${n}</p>
     <h2 class="qtext">${Q.q}</h2>
+    ${Q.img ? `<img class="q-img glass" src="${esc(Q.img)}" alt="">` : ''}
     <div class="opts" id="opts">
-      ${Q.o.map((o,i)=>`<button class="glass opt" data-opt="${i}"><span class="l">${'ABCD'[i]}</span><span class="tx">${o}</span><svg class="ic mk" viewBox="0 0 24 24"></svg></button>`).join('')}
+      ${Q.o.map((o,i)=>`<button class="glass opt" data-opt="${i}"><span class="l">${'ABCDEF'[i]}</span><span class="tx">${o}</span><svg class="ic mk" viewBox="0 0 24 24"></svg></button>`).join('')}
     </div>
     <div class="glass explain" id="explain" hidden></div>
     <div class="quiz-foot">
@@ -510,8 +580,8 @@ function renderQuiz(){
   startTimer();
 }
 function startQuizSilently(){ // for direct jumps from the side panel
-  const pool = shuffle(S.chemistry.q);
-  quiz = {sid:'chemistry', unit:'Atomic Structure', opts:{}, qs: buildQuestions(pool), i:0, answers:[], sel:null, locked:false, qtime:QTIME, left:QTIME, started:Date.now(), instant:state.settings.instant, timed:state.settings.timer};
+  const sid = firstSid(), pool = shuffle(S[sid].q);
+  quiz = {sid, unit:S[sid].units[0]||'', opts:{}, qs: buildQuestions(pool), i:0, answers:[], sel:null, locked:false, qtime:QTIME, left:QTIME, started:Date.now(), instant:state.settings.instant, timed:state.settings.timer};
 }
 function startTimer(){
   stopTimer();
@@ -575,8 +645,8 @@ function finish(){
   stopTimer();
   const correct = quiz.answers.filter(a=>a && a.ok).length;
   const skipped = quiz.answers.filter(a=>!a || a.sel===null).length;
-  const attempt = {sid:quiz.sid, unit:quiz.unit, correct, total:quiz.qs.length, t:Date.now()};
-  state.attempts.push(attempt); save();
+  const attempt = {sid:quiz.sid, unit:quiz.unit, correct, total:quiz.qs.length, t:Date.now(), exam:!!quiz.exam};
+  state.attempts.push(attempt); save(); syncAll();
   state.lastResult = {...attempt, opts: quiz.opts, exam: quiz.exam, skipped, wrong: quiz.qs.length - correct - skipped, secs: Math.round((Date.now()-quiz.started)/1000), qs: quiz.qs, answers: quiz.answers};
   state.filter = 'all';
   quiz = null;
@@ -585,16 +655,15 @@ function finish(){
 
 /* ================= RESULTS ================= */
 function demoResult(){
-  const qs = buildQuestions(S.chemistry.q.slice());
-  const picks = [qs[0].a, qs[1].a, (qs[2].a+1)%4, qs[3].a, null, qs[5].a];
-  const answers = picks.map((p,i)=>({sel:p, ok:p===qs[i].a}));
-  const correct = answers.filter(a=>a.ok).length;
-  return {sid:'chemistry', unit:'Atomic Structure', correct, total:6, skipped:1, wrong:6-correct-1, secs:142, qs, answers, sample:true};
+  const sid = firstSid(), qs = buildQuestions(S[sid].q.slice(0,6));
+  const answers = qs.map((q,i)=>{ const p = i===4 ? null : i===2 ? (q.a+1)%q.o.length : q.a; return {sel:p, ok:p===q.a}; });
+  const correct = answers.filter(a=>a.ok).length, skipped = answers.filter(a=>a.sel===null).length;
+  return {sid, unit:S[sid].units[0]||'', correct, total:Math.max(qs.length,1), skipped, wrong:qs.length-correct-skipped, secs:142, qs, answers, sample:true};
 }
 function renderResults(){
   const r = state.lastResult || (state.lastResult = demoResult());
   const p = pct(r), pass = p >= 50;
-  const name = r.sid === 'mock' ? 'Mock exam' : S[r.sid].name;
+  const name = r.sid === 'mock' ? 'Mock exam' : (S[r.sid]||{name:'Quiz'}).name;
   const head = p >= 85 ? 'Excellent work' : p >= 50 ? 'You passed' : 'Keep practising';
   const sub = p >= 85 ? 'You are exam-ready on this unit.' : p >= 50 ? 'Review the answers below to push your score higher.' : 'Go through the explanations, then try again.';
   const items = r.qs.map((q,i)=>({q, a:r.answers[i] || {sel:null, ok:false}, i}))
@@ -690,13 +759,13 @@ function renderHistory(){
   const grid = [0,50,100].map(v => `<line x1="${sL}" x2="${W-sR}" y1="${y(v)}" y2="${y(v)}" style="stroke:${v===50?'var(--text-2)':'var(--hair)'}" ${v===50?'stroke-dasharray="4 4" stroke-opacity=".6"':''}/><text x="${sL-8}" y="${y(v)+4}" text-anchor="end" font-size="10" class="f-mut">${v}%</text>`).join('');
   const bars = last.map((a,i) => {
     const p = pct(a), x = sL + i*bw + bw*0.2, w = bw*0.6;
-    const lab = a.sid==='mock' ? 'Mx' : S[a.sid].sym;
+    const lab = a.sid==='mock' ? 'Mx' : S[a.sid] ? S[a.sid].sym : '–';
     return `<rect x="${x}" y="${y(p)}" width="${w}" height="${Math.max(ih - (y(p)-sT), 2)}" rx="5" style="fill:${p>=50?EM:CORAL}" fill-opacity="${i===last.length-1?1:.75}"/>
       <text x="${x+w/2}" y="${Hh-8}" text-anchor="middle" font-size="10" font-weight="700" class="f-mut">${lab}</text>`;
   }).join('');
 
   /* course completion by category */
-  const done = state.done.size, cp = Math.round(done/TOTAL_LESSONS*100);
+  const done = state.done.size, cp = TOTAL_LESSONS ? Math.min(100, Math.round(done/TOTAL_LESSONS*100)) : 0;
   const catRows = CATS.map(c => { const ks = ORDER.filter(k=>S[k].cat===c.id); const tot = ks.reduce((s,k)=>s+S[k].units.length,0), d = ks.reduce((s,k)=>s+lessonsDone(k),0);
     return `<div class="stack" style="gap:5px"><div class="row between small"><b>${c.name}</b><span class="muted num">${d}/${tot}</span></div><div class="bar"><i style="width:${d/tot*100}%"></i></div></div>`; }).join('');
 
@@ -758,32 +827,126 @@ function setMethod(m){
   $('#f-email').hidden = m !== 'email'; $('#f-phone').hidden = m !== 'phone';
   $('#auth-err').hidden = true;
 }
-$('#auth-form').addEventListener('submit', e => {
-  e.preventDefault();
-  const err = $('#auth-err'), fail = m => { err.textContent = m; err.hidden = false; };
-  const email = $('#in-email').value.trim(), phone = $('#in-phone').value.replace(/\s/g,''), pass = $('#in-pass').value;
-  const name = $('#in-name').value.trim();
-  if (authMode === 'register' && name.length < 2) return fail('Enter your full name.');
-  if (method === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('Enter an email like name@example.com.');
-  if (method === 'phone' && !/^[0-9]{7,9}$/.test(phone)) return fail('Enter your number without +252, e.g. 61 234 5678.');
-  if (pass.length < 6) return fail('Password needs at least 6 characters.');
-  const id = method==='email' ? email : '+252 '+phone;
-  if (authMode === 'register') state.user = {name, email:id, form: $('#in-form').value};
-  else if (!state.user || state.user.email !== id){
-    const guess = method==='email' ? email.split('@')[0].replace(/[._-]+/g,' ').replace(/\b\w/g, c=>c.toUpperCase()) : 'Student';
-    state.user = {name: guess, email:id, form:'Form 4'};
-  }
-  $('#in-pass').value = '';
-  save();
-  go('home');
-  toast(authMode === 'register' ? 'Account created. Soo dhawoow!' : 'Signed in');
-});
-$('#guest').addEventListener('click', () => { state.user = {name:'Guest student', email:'Not signed in', form:'Form 4'}; save(); go('home'); });
-function signOut(){
-  $('#profile').hidden = true; $('#menu').hidden = true;
-  state.user = null; store.set('user', null);
-  setAuth('signin'); go('auth'); toast('Signed out');
+const online = () => !!(window.SB && SB.user && state.user && !state.user.guest);
+function friendly(e){
+  const m = String((e && e.message) || '').toLowerCase();
+  if (e && e.code === 'offline') return 'No internet connection. Connect and try again.';
+  if (m.includes('invalid login')) return 'Wrong email or password.';
+  if (m.includes('already registered') || m.includes('already been registered') || (e && e.code === 'user_already_exists')) return 'This email already has an account. Sign in instead.';
+  if (m.includes('email not confirmed')) return 'Confirm your email first: open the link we sent you, then sign in.';
+  if ((e && e.status === 429) || m.includes('rate limit')) return 'Too many tries. Wait a minute and try again.';
+  if (m.includes('signups not allowed')) return 'New sign-ups are closed right now.';
+  return (e && e.message) || 'Something went wrong. Try again.';
 }
+function userFromProfile(p){
+  return {id:p.id, name: p.full_name || (p.email||'Student').split('@')[0], email:p.email, form:p.form, role:p.role, status:p.status};
+}
+async function fetchProfile(){
+  const rows = await SB.select('profiles', {id:'eq.'+SB.user.id});
+  return rows && rows[0];
+}
+function switchOwner(id){
+  const owner = store.get('owner', null);
+  if (owner && owner !== id){ state.attempts = []; state.done = new Set(); state.doneq = []; }
+  if (!owner && id === 'guest') { /* keep old local data for guests */ }
+  store.set('owner', id);
+}
+async function afterSignIn(){
+  const p = await fetchProfile();
+  if (!p) throw new Error('Your account is still being set up. Try again in a minute.');
+  if (p.status === 'blocked'){ await SB.signOut(); throw new Error('This account has been blocked. Contact Horn Afriik for help.'); }
+  if (p.status === 'pending'){ await SB.signOut(); throw new Error('Your account is waiting for approval. Try again later.'); }
+  switchOwner(p.id);
+  state.user = userFromProfile(p); save();
+  SB.update('profiles', {id:'eq.'+p.id}, {last_seen: new Date().toISOString()}).catch(()=>{});
+  syncAll();
+}
+let authBusy = false;
+$('#auth-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (authBusy) return;
+  const err = $('#auth-err'), fail = m => { err.textContent = m; err.hidden = false; };
+  const email = $('#in-email').value.trim().toLowerCase(), pass = $('#in-pass').value;
+  const name = $('#in-name').value.trim(), form = $('#in-form').value;
+  if (authMode === 'register' && name.length < 2) return fail('Enter your full name.');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('Enter an email like name@example.com.');
+  if (pass.length < 6) return fail('Password needs at least 6 characters.');
+  if (!window.SB) return fail('Could not load the sign-in service. Refresh the page.');
+  const btn = $('#auth-submit'), label = btn.textContent;
+  authBusy = true; btn.disabled = true; btn.textContent = 'Please wait…'; err.hidden = true;
+  let created = false;
+  try {
+    if (authMode === 'register'){
+      const r = await SB.signUp(email, pass, {full_name:name, form});
+      created = true;
+      if (!r.session){ setAuth('signin'); $('#in-email').value = email; fail('Account created. Open the link we emailed you, then sign in.'); return; }
+    } else {
+      await SB.signIn(email, pass);
+    }
+    await afterSignIn();
+    $('#in-pass').value = '';
+    go('home');
+    toast(authMode === 'register' ? 'Account created. Soo dhawoow!' : 'Signed in');
+  } catch(ex){
+    if (created){ setAuth('signin'); $('#in-email').value = email; }   // account exists now: next try is a sign-in
+    fail(friendly(ex));
+  }
+  finally { authBusy = false; btn.disabled = false; if (btn.textContent === 'Please wait…') btn.textContent = authMode === 'register' ? 'Create account' : 'Sign in'; }
+});
+$('#guest').addEventListener('click', () => {
+  switchOwner('guest');
+  state.user = {guest:true, name:'Guest student', email:'Not signed in', form:'Form 4'}; save(); go('home');
+  toast('Guest mode: progress stays on this phone');
+});
+let signingOut = false;
+function signOut(msg){
+  signingOut = true;
+  $('#profile').hidden = true; $('#menu').hidden = true;
+  if (window.SB && SB.session) SB.signOut().finally(() => { signingOut = false; }); else signingOut = false;
+  state.user = null; store.set('user', null);
+  setAuth('signin'); go('auth'); toast(msg || 'Signed out');
+}
+
+/* ================= SYNC (scores and lessons follow the student to any phone) ================= */
+let syncing = null, lastProfileCheck = 0;
+function syncAll(){
+  if (!online()) return Promise.resolve();
+  if (syncing) return syncing;
+  syncing = (async () => {
+    const uid = SB.user.id;
+    try {
+      if (Date.now() - lastProfileCheck > 5*60000){
+        const p = await fetchProfile(); lastProfileCheck = Date.now();
+        if (!p || p.status !== 'active'){ signOut(p && p.status === 'pending' ? 'Your account is waiting for approval' : 'This account has been blocked'); return; }
+        const u = userFromProfile(p); state.user = {...state.user, ...u};
+      }
+      const pend = state.attempts.filter(a => !a.synced && a.total > 0);
+      if (pend.length){
+        await SB.insert('attempts', pend.map(a => ({sid:a.sid, unit:a.unit||'', correct:a.correct, total:a.total, exam:!!a.exam, client_t:a.t})), {returning:false, ignore:true, onConflict:'user_id,client_t'});
+        pend.forEach(a => a.synced = true);
+      }
+      for (const d of state.doneq.slice()){
+        if (d.on) await SB.insert('lesson_done', {sid:d.sid, unit:d.unit}, {returning:false, ignore:true, onConflict:'user_id,sid,unit'});
+        else await SB.remove('lesson_done', {user_id:'eq.'+uid, sid:'eq.'+d.sid, unit:'eq.'+d.unit});
+        state.doneq = state.doneq.filter(x => x !== d);
+      }
+      const [att, dn] = await Promise.all([
+        SB.selectAll('attempts', {user_id:'eq.'+uid, order:'client_t.asc', select:'sid,unit,correct,total,exam,client_t'}),
+        SB.selectAll('lesson_done', {user_id:'eq.'+uid, select:'sid,unit'})
+      ]);
+      if (!SB.user || SB.user.id !== uid) return;
+      const local = state.attempts.filter(a => !a.synced);
+      state.attempts = att.map(a => ({sid:a.sid, unit:a.unit, correct:a.correct, total:a.total, exam:a.exam, t:Number(a.client_t), synced:true})).concat(local);
+      state.done = new Set(dn.map(d => d.sid+'|'+d.unit));
+      state.doneq.forEach(d => d.on ? state.done.add(d.k) : state.done.delete(d.k));
+      save(); refreshScreen();
+    } catch(e){ save(); /* offline or server busy: try again later */ }
+  })().finally(() => { syncing = null; });
+  return syncing;
+}
+window.addEventListener('online', () => { syncAll(); loadContent(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden){ syncAll(); loadContent(); } });
+if (window.SB) SB.onAuth(sess => { if (!sess && !signingOut && state.user && !state.user.guest && current !== 'auth') signOut('Please sign in again'); });
 
 /* ================= PROFILE ================= */
 function openProfile(){
@@ -801,7 +964,7 @@ function isDark(){
 $('#profile').addEventListener('click', e => {
   if (e.target.id === 'profile' || e.target.closest('#p-close')) $('#profile').hidden = true;
   const f = e.target.closest('[data-form]');
-  if (f){ state.user.form = f.dataset.form; save(); $$('#p-forms button').forEach(b=>b.classList.toggle('on', b===f)); toast('Class set to '+f.dataset.form); }
+  if (f){ state.user.form = f.dataset.form; save(); if (online()) SB.update('profiles', {id:'eq.'+SB.user.id}, {form:f.dataset.form}).catch(()=>{}); $$('#p-forms button').forEach(b=>b.classList.toggle('on', b===f)); toast('Class set to '+f.dataset.form); }
   if (e.target.closest('#sw-theme')) toggleTheme();
   if (e.target.closest('#p-signout')) signOut();
 });
@@ -839,11 +1002,22 @@ $('#contact').addEventListener('click', e => {
     try { navigator.clipboard.writeText(contactMsg).then(()=>toast('Message copied. Paste it in Messenger'), ()=>{}); } catch(_) {}
   }
 });
-function sendFeedback(){
+async function sendFeedback(){
   const err = $('#fb-err');
-  if ($('#fb-msg').value.trim().length < 10){ err.textContent = 'Write at least 10 characters so we can help.'; err.hidden = false; $('#fb-msg').focus(); return; }
+  const msg = $('#fb-msg').value.trim();
+  if (msg.length < 10){ err.textContent = 'Write at least 10 characters so we can help.'; err.hidden = false; $('#fb-msg').focus(); return; }
   err.hidden = true;
-  openContact(feedbackText());
+  const btn = $('[data-act="contact-feedback"]'); if (btn.disabled) return;
+  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Sending…';
+  try {
+    if (!window.SB) throw new Error('offline');
+    await SB.insert('feedback', {name: state.user.name, form: state.user.form, topic: $('#fb-topic').value, rating: state.rating, message: msg}, {returning:false});
+    $('#fb-msg').value = '';
+    toast('Feedback sent. Mahadsanid!');
+  } catch(e){
+    openContact(feedbackText());
+    toast('Could not send online. Pick an app to send it');
+  } finally { btn.disabled = false; btn.textContent = label; }
 }
 
 /* ================= MENU ================= */
@@ -852,6 +1026,7 @@ function openMenu(){
   $('#m-name').textContent = state.user.name;
   $('#m-form').textContent = state.user.form + ' · ' + state.user.email;
   $('#m-lessons').textContent = state.done.size + '/' + TOTAL_LESSONS;
+  $('#m-admin').hidden = !(state.user && state.user.role === 'admin');
   $('#m-acc').textContent = stats().acc + '%';
   $('#m-theme').setAttribute('aria-checked', isDark());
   $$('#m-nav [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === TABS[current]));
@@ -891,9 +1066,9 @@ document.addEventListener('click', e => {
   if (j){
     const k = j.dataset.jump;
     $('#profile').hidden = true; $('#leave').hidden = true; $('#exam').hidden = true;
-    if (k === 'subject' || k === 'lesson'){ state.sid = 'chemistry'; state.unit = 'Acids & Bases'; }
+    if (k === 'subject' || k === 'lesson'){ state.sid = firstSid(); state.unit = S[state.sid].units[0]; }
     if (k === 'exam'){ if (current === 'auth' || current === 'quiz' || !current) go('home'); openExam(); return; }
-    if (k === 'quiz'){ state.sid = 'chemistry'; startQuiz('chemistry','Atomic Structure'); return; }
+    if (k === 'quiz'){ state.sid = firstSid(); startQuiz(state.sid, S[state.sid].units[0]); return; }
     if (k === 'auth') setAuth('signin');
     go(k); return;
   }
@@ -907,7 +1082,8 @@ document.addEventListener('click', e => {
     case 'signout': signOut(); break;
     case 'subject': state.sid = a.dataset.sid; go('subject'); break;
     case 'lesson': if (a.dataset.sid) state.sid = a.dataset.sid; state.unit = a.dataset.unit; go('lesson'); break;
-    case 'toggle-done': { const k = state.sid+'|'+state.unit; state.done.has(k) ? state.done.delete(k) : state.done.add(k); save(); const y = $('#s-lesson').scrollTop; renderLesson(); $('#s-lesson').scrollTop = y; toast(state.done.has(k) ? 'Lesson marked complete' : 'Lesson marked not done'); break; }
+    case 'admin': location.href = 'admin.html'; break;
+    case 'toggle-done': { const k = state.sid+'|'+state.unit; setDone(state.sid, state.unit, !state.done.has(k)); const y = $('#s-lesson').scrollTop; renderLesson(); $('#s-lesson').scrollTop = y; toast(state.done.has(k) ? 'Lesson marked complete' : 'Lesson marked not done'); break; }
     case 'back': go('home'); break;
     case 'home': go('home'); break;
     case 'exam': $('#menu').hidden = true; openExam(); break;
@@ -928,7 +1104,7 @@ document.addEventListener('click', e => {
 });
 
 /* ================= EXAM SETUP ================= */
-const PAPERS = [{id:'mixed', name:'Mixed (all 12)'}, ...CATS.map(c=>({id:c.id, name:c.name})), {id:'single', name:'One subject'}];
+const PAPERS = [{id:'mixed', name:'Mixed (all subjects)'}, ...CATS.map(c=>({id:c.id, name:c.name})), {id:'single', name:'One subject'}];
 function examPool(){
   const e = state.exam;
   const keys = e.mode === 'mixed' ? ORDER : e.mode === 'single' ? [e.sid] : ORDER.filter(k=>S[k].cat===e.mode);
@@ -958,7 +1134,8 @@ $('#exam').addEventListener('click', e => {
   if (t.closest('#ex-start')){
     const {pool} = examPool();
     const picked = shuffle(pool).slice(0, e2.count);
-    const paper = PAPERS.find(p=>p.id===e2.mode).name.replace(' (all 12)','');
+    if (!picked.length){ toast('No questions in this paper yet'); return; }
+    const paper = PAPERS.find(p=>p.id===e2.mode).name.replace(' (all subjects)','');
     $('#exam').hidden = true;
     if (e2.mode === 'single'){ state.sid = e2.sid; startQuiz(e2.sid, 'Exam · '+e2.count+' questions', {pool:picked, qtime:e2.time, exam:true}); }
     else startQuiz('mock', paper+' paper · '+e2.count+' questions', {pool:picked, qtime:e2.time, exam:true});
@@ -969,14 +1146,19 @@ $('#leave-go').addEventListener('click', () => { $('#leave').hidden = true; cons
 $('#leave').addEventListener('click', e => { if (e.target.id === 'leave') $('#leave').hidden = true; });
 document.addEventListener('keydown', e => {
   if (current !== 'quiz' || !quiz) return;
-  const k = e.key.toUpperCase(), i = 'ABCD'.indexOf(k);
+  const k = e.key.toUpperCase(), i = 'ABCDEF'.indexOf(k);
   if (i >= 0 && i < quiz.qs[quiz.i].o.length) choose(i);
   if (e.key === 'Enter' && !$('#q-next').disabled) $('#q-next').click();
 });
 
 /* ================= BOOT ================= */
 const th = store.get('theme', null); if (th) document.documentElement.dataset.theme = th;
+applyContent(store.get('content', null));
+if (state.user && !state.user.guest && !(window.SB && SB.session)) state.user = null;   // old demo sign-in: ask to sign in for real
+if (!S[state.sid]) state.sid = firstSid();
 go(state.user ? 'home' : 'auth');
+loadContent();
+syncAll();
 
 /* ================= PWA: offline + install ================= */
 if ('serviceWorker' in navigator && location.protocol !== 'file:'){
