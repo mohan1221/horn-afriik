@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; manifest-src 'self'; worker-src 'self'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Horn Afriik</title>
+<meta name="description" content="Horn Afriik: Somali secondary courses and exam preparation. 12 subjects, lessons with diagrams, timed tests and exam practice for Forms 1 to 4.">
+<meta name="theme-color" content="#0284C7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#08101F" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Horn Afriik">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Horn Afriik">
+<meta property="og:description" content="Somali secondary courses and exam preparation: lessons, tests and timed exams.">
+<meta property="og:image" content="icons/icon-512.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@500;600&display=swap">
+<link rel="stylesheet" href="assets/css/styles.css?v=1.0.0">
+</head>
+<body>
+<noscript><p style="padding:24px;font-family:system-ui">Horn Afriik needs JavaScript to run. Please enable it in your browser settings.</p></noscript><div class="stage">
+  <aside class="panel">
+    <div class="brand">
+      <div class="mark"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 16.6l-5.6 3.3 1.4-6.3L3 9.3l6.4-.6z" fill="#fff"/></svg></div>
+      <div class="wordmark">Horn Afriik<small>Exam preparation</small></div>
+    </div>
+    <div class="stack" style="gap:12px">
+      <h1>Somali secondary courses, <em>one question at a time.</em></h1>
+      <p class="lede">A study app for Forms 1 to 4. Twelve subjects, timed quizzes and a clear review of every answer.</p>
+    </div>
+    <ul class="features">
+      <li><b>12 subjects, 40 lessons</b>Science, languages, arts and Islamic studies, each with diagrams.</li>
+      <li><b>Test after every lesson</b>Timed questions with instant explanations.</li>
+      <li><b>Exam mode</b>Build a timed paper and review every answer.</li>
+      <li><b>Works offline</b>Install it once and keep studying without data.</li>
+    </ul>
+    <button class="btn primary" id="install-btn" hidden>Install the app</button>
+  </aside>
+
+  <div class="device">
+    <div class="app" id="app">
+      <div class="island"></div>
+      <div class="bg"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span></div>
+
+      <!-- 1. AUTH -->
+      <section class="screen nobar" id="s-auth" hidden>
+        <div class="auth-hero">
+          <div class="brand">
+            <div class="mark" style="width:44px;height:44px;border-radius:14px"><svg viewBox="0 0 24 24" style="width:24px;height:24px"><path d="M12 2.8l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 16.6l-5.6 3.3 1.4-6.3L3 9.3l6.4-.6z" fill="#fff"/></svg></div>
+            <div class="wordmark">Horn Afriik<small>Secondary exam prep</small></div>
+          </div>
+          <h1 class="h-display">Soo dhawoow. <em>Ready for your exams?</em></h1>
+          <p class="muted">Practise all 12 secondary subjects with timed quizzes and full answer review.</p>
+        </div>
+        <div class="glass card form">
+          <div class="seg" style="background:var(--field)" role="tablist">
+            <button class="on" data-auth="signin" id="tab-signin">Sign in</button>
+            <button data-auth="register" id="tab-register">Register</button>
+          </div>
+          <div class="seg" style="background:var(--field)">
+            <button class="on" data-method="email" id="m-email">Email</button>
+            <button data-method="phone" id="m-phone">Phone</button>
+          </div>
+          <form id="auth-form" class="form" novalidate>
+            <div class="field" id="f-name" hidden>
+              <label for="in-name">Full name</label>
+              <div class="input"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><input id="in-name" autocomplete="name" placeholder="Ayaan Warsame"></div>
+            </div>
+            <div class="field" id="f-form" hidden>
+              <label for="in-form">Class</label>
+              <div class="input"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                <select id="in-form"><option>Form 1</option><option>Form 2</option><option>Form 3</option><option selected>Form 4</option></select></div>
+            </div>
+            <div class="field" id="f-email">
+              <label for="in-email">Email</label>
+              <div class="input"><svg class="ic" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg><input id="in-email" type="email" autocomplete="email" placeholder="name@example.com"></div>
+            </div>
+            <div class="field" id="f-phone" hidden>
+              <label for="in-phone">Phone number</label>
+              <div class="input"><span class="small" style="font-weight:700">+252</span><input id="in-phone" type="tel" inputmode="tel" placeholder="61 234 5678"></div>
+            </div>
+            <div class="field">
+              <label for="in-pass">Password</label>
+              <div class="input"><svg class="ic" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><input id="in-pass" type="password" autocomplete="current-password" placeholder="At least 6 characters"></div>
+            </div>
+            <p class="err" id="auth-err" hidden></p>
+            <button class="btn primary block" type="submit" id="auth-submit">Sign in</button>
+          </form>
+        </div>
+        <button class="link" style="align-self:center" id="guest">Continue as guest</button>
+      </section>
+
+      <!-- 2. HOME -->
+      <section class="screen" id="s-home" hidden></section>
+      <!-- 3. SUBJECT -->
+      <section class="screen" id="s-subject" hidden></section>
+      <!-- 4. QUIZ -->
+      <section class="screen nobar" id="s-quiz" hidden></section>
+      <!-- 5. RESULTS -->
+      <section class="screen" id="s-results" hidden></section>
+      <!-- Lesson (course content) -->
+      <section class="screen" id="s-lesson" hidden></section>
+      <!-- Explore / History -->
+      <section class="screen" id="s-explore" hidden></section>
+      <section class="screen" id="s-history" hidden></section>
+
+      <!-- 6. SUPPORT -->
+      <section class="screen" id="s-support" hidden>
+        <div class="page-top"><div class="stack" style="gap:4px"><span class="eyebrow">Support</span><h1 class="h-display page-h">Contact &amp; about</h1></div><button class="menu-btn glass" data-act="menu" aria-label="Open menu"><svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/></svg></button></div>
+        <div class="glass card stack" style="gap:12px">
+          <div class="stack" style="gap:2px"><b style="font-size:16px">Talk to us</b><span class="muted small">Questions about a lesson, an exam or your account? Pick WhatsApp, Facebook, email or a phone call.</span></div>
+          <div class="cta-slot"></div>
+        </div>
+        <div class="glass card mission">
+          <span class="eyebrow">About us</span>
+          <blockquote>“Every student in the Horn deserves a fair shot at the exam hall.”</blockquote>
+          <p>Horn Afriik builds exam practice for Somali secondary students. Questions follow the secondary syllabus in Somali, English and Arabic, and each answer comes with a short explanation so you learn from mistakes.</p>
+          <div class="mstats">
+            <div><b class="num">12</b><span>subjects</span></div>
+            <div><b class="num">4</b><span>forms</span></div>
+            <div><b class="num">3</b><span>languages</span></div>
+          </div>
+        </div>
+        <div class="sec-title"><h3>Send feedback</h3></div>
+        <form class="glass card form" id="fb-form" novalidate>
+          <div class="field">
+            <label for="fb-topic">Topic</label>
+            <div class="input"><select id="fb-topic"><option>Report a wrong answer</option><option>Suggest a subject or unit</option><option>Account &amp; sign-in</option><option>Something else</option></select></div>
+          </div>
+          <div class="field">
+            <label>Rate the app</label>
+            <div class="stars" id="stars"></div>
+          </div>
+          <div class="field">
+            <label for="fb-msg">Message</label>
+            <textarea class="ta" id="fb-msg" placeholder="Tell us what happened, including the subject and question number."></textarea>
+          </div>
+          <p class="err" id="fb-err" hidden></p>
+          <button type="button" class="btn primary block" data-act="contact-feedback">Send feedback</button>
+        </form>
+        <div class="sec-title"><h3>Common questions</h3></div>
+        <div class="glass faq">
+          <details><summary>Can I study offline?<svg class="ic" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></summary><p>Yes. After the first visit, lessons, tests and exams all work without internet. Your progress is saved on this device.</p></details>
+          <details><summary>What is the pass mark?<svg class="ic" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></summary><p>A quiz counts as passed at 50% or higher. Your results screen shows it in green.</p></details>
+          <details><summary>How is the streak counted?<svg class="ic" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></summary><p>Finish at least one quiz a day to keep your streak going.</p></details>
+        </div>
+      </section>
+
+      <nav class="tabbar glass" id="tabbar" hidden>
+        <button data-tab="home"><svg class="ic" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>Home</button>
+        <button data-tab="explore"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Courses</button>
+        <button class="exam-btn" data-act="exam" aria-label="Start an exam"><span class="orb"><svg class="ic" viewBox="0 0 24 24"><path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span>Exam</button>
+        <button data-tab="history"><svg class="ic" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-9"/></svg>Stats</button>
+        <button data-tab="support"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Support</button>
+      </nav>
+
+      <div class="scrim" id="profile" hidden>
+        <div class="sheet" role="dialog" aria-label="Profile">
+          <div class="grab"></div>
+          <div class="row">
+            <div class="avatar" id="p-avatar">AW</div>
+            <div class="stack"><b id="p-name" style="font-size:17px">Ayaan Warsame</b><span class="muted small" id="p-email">ayaan.warsame@example.com</span></div>
+          </div>
+          <div class="field"><label>Class</label><div class="forms" id="p-forms"></div></div>
+          <div class="setting"><div class="meta"><b>Dark theme</b><span>Easier on the eyes for night study</span></div><button class="switch" role="switch" aria-checked="false" id="sw-theme" aria-label="Dark theme"></button></div>
+          <div class="row">
+            <button class="btn ghost" style="flex:1" id="p-close">Close</button>
+            <button class="btn coral" style="flex:1" id="p-signout"><svg class="ic" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Sign out</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-scrim" id="menu" hidden>
+        <nav class="drawer" aria-label="Main menu">
+          <div class="drawer-head">
+            <div class="avatar" id="m-avatar">AW</div>
+            <div class="stack"><b id="m-name">Ayaan Warsame</b><span class="muted small" id="m-form">Form 4</span></div>
+            <button class="icon-btn glass" data-act="menu-close" aria-label="Close menu"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+          </div>
+          <div class="nav" id="m-nav">
+            <button data-tab="home"><svg class="ic" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>Home</button>
+            <button data-tab="explore"><svg class="ic" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>Courses<small id="m-lessons"></small></button>
+            <button class="exam-link" data-act="exam"><svg class="ic" viewBox="0 0 24 24"><path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>Take an exam</button>
+            <button data-tab="history"><svg class="ic" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-9"/></svg>Dashboard<small id="m-acc"></small></button>
+            <button data-tab="support"><svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Contact &amp; about</button>
+            <button data-act="profile"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile &amp; class</button>
+          </div>
+          <div class="foot">
+            <div class="cta-slot"></div>
+            <div class="setting" style="padding:4px 0"><div class="meta"><b>Dark theme</b></div><button class="switch" role="switch" aria-checked="false" id="m-theme" aria-label="Dark theme"></button></div>
+            <button class="btn ghost block" data-act="signout"><svg class="ic" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Sign out</button>
+          </div>
+        </nav>
+      </div>
+
+      <div class="scrim" id="contact" hidden>
+        <div class="sheet" role="dialog" aria-label="Contact us">
+          <div class="grab"></div>
+          <div class="row between" style="align-items:flex-start">
+            <div class="stack" style="gap:4px"><span class="eyebrow">Horn Afriik support</span><h3 class="h-display" style="font-size:24px">Contact us</h3><p class="muted small">Choose the app that suits you. We reply on every channel.</p></div>
+            <button class="icon-btn glass" id="ct-close" aria-label="Close"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+          </div>
+          <div class="ct-note" id="ct-note" hidden><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span>Your feedback is added to WhatsApp and email automatically. For Facebook it is copied, so paste it into Messenger.</span></div>
+          <div class="glass contact">
+            <a class="ci ci-link" id="ct-wa" href="https://wa.me/252619892112" target="_blank" rel="noopener">
+              <span class="ib wa"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+              <span class="meta"><small>WhatsApp</small><b>Chat · +252 61 989 2112</b></span><svg class="ic chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+            <a class="ci ci-link" id="ct-fb" href="https://www.facebook.com/profile.php?id=100073812635807" target="_blank" rel="noopener">
+              <span class="ib fb"><svg class="ic" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></span>
+              <span class="meta"><small>Facebook</small><b>Message us on Facebook</b></span><svg class="ic chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></a>
+            <div class="ci">
+              <a class="ci-main" id="ct-mail" href="mailto:alamiin177@gmail.com?subject=Horn%20Afriik%20support">
+                <span class="ib ml"><svg class="ic" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
+                <span class="meta"><small>Email</small><b id="ct-email-t">alamiin177@gmail.com</b></span></a>
+              <button class="copy" data-copy="ct-email-t">Copy</button></div>
+            <div class="ci">
+              <a class="ci-main" href="tel:+252619892112">
+                <span class="ib ph"><svg class="ic" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+                <span class="meta"><small>Phone call</small><b id="ct-phone-t">+252 61 989 2112</b></span></a>
+              <button class="copy" data-copy="ct-phone-t">Copy</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scrim" id="exam" hidden>
+        <div class="sheet" role="dialog" aria-label="Start an exam">
+          <div class="grab"></div>
+          <div class="stack" style="gap:4px"><span class="eyebrow" style="color:var(--coral)">Exam mode</span><h3 class="h-display" style="font-size:24px">Set up your exam</h3><p class="muted small">Exams are timed, and answers are revealed at the end, as in the exam hall.</p></div>
+          <div class="opt-group"><label class="eyebrow">Paper</label><div class="pills" id="ex-mode"></div></div>
+          <div class="opt-group" id="ex-subj-wrap"><label class="eyebrow">Subject</label><div class="pills" id="ex-subj"></div></div>
+          <div class="opt-group"><label class="eyebrow">Questions</label><div class="pills" id="ex-count"></div></div>
+          <div class="opt-group"><label class="eyebrow">Time per question</label><div class="pills" id="ex-time"></div></div>
+          <div class="exam-sum" id="ex-sum"></div>
+          <div class="row"><button class="btn ghost" style="flex:1" id="ex-cancel">Cancel</button><button class="btn coral" style="flex:1.4" id="ex-start">Start exam</button></div>
+        </div>
+      </div>
+
+      <div class="scrim center" id="leave" hidden>
+        <div class="dialog" role="dialog" aria-label="Leave quiz">
+          <h3>Leave this quiz?</h3>
+          <p class="muted small">Answers from this attempt will not be saved.</p>
+          <div class="row"><button class="btn ghost" id="leave-stay">Keep going</button><button class="btn coral" id="leave-go">Leave</button></div>
+        </div>
+      </div>
+
+      <div class="toast glass" id="toast"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg><span id="toast-t"></span></div>
+    </div>
+  </div>
+</div>
+<script src="assets/js/app.js?v=1.0.0" defer></script>
+</body>
+</html>
